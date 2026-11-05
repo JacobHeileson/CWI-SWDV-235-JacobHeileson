@@ -3,6 +3,7 @@ package edu.cwi;
 
 import io.javalin.http.staticfiles.Location;
 import io.javalin.Javalin;
+import io.javalin.rendering.template.JavalinJte;
 import static io.javalin.apibuilder.ApiBuilder.*;
 
 public class Main {
@@ -11,6 +12,9 @@ public class Main {
         TransactionsController transactionsController = new TransactionsController();
 
         var app = Javalin.create(config -> {
+
+            config.fileRenderer(new JavalinJte());
+
             config.staticFiles.add("/public", Location.CLASSPATH);
 
             config.routes.post("/account", ctx -> {
@@ -39,4 +43,3 @@ public class Main {
         app.start(7070);
     }
 }
-

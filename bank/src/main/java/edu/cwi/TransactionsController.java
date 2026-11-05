@@ -10,67 +10,11 @@ public class TransactionsController implements CrudHandler {
 private final Map<String, String> transactions = new ConcurrentHashMap<>();
 private int nextId = 1;
 
-@Override
-public void getAll(Context ctx) {
-    ctx.html(
-        html(
-            body(
-                h1("Bank Transactions"),
-
-                ul(
-                    each(transactions.entrySet(), transaction ->
-                        li("ID: " + transaction.getKey() +
-                            " - " + transaction.getValue())
-                    )
-                ),
-
-                h2("Create Transaction"),
-
-                form()
-                    .withAction("/transactions")
-                    .withMethod("post")
-                    .with(
-                        label("Description: "),
-                        input().withName("description"),
-
-                        label("Amount: "),
-                        input().withName("amount"),
-
-                        button("Create Transaction").withType("submit")
-                    ),
-
-                h2("Update Transaction"),
-
-                form()
-                    .withAction("/transactions/update")
-                    .withMethod("post")
-                    .with(
-                        label("Transaction ID: "),
-                        input().withName("id"),
-
-                        label("New Description: "),
-                        input().withName("description"),
-
-                        label("New Amount: "),
-                        input().withName("amount"),
-
-                        button("Update Transaction").withType("submit")
-                    ),
-                    h2("Delete Transaction"),
-
-                    form()
-                        .withAction("/transactions/delete")
-                        .withMethod("post")
-                        .with(
-                            label("Transaction ID: "),
-                            input().withName("id"),
-
-                            button("Delete Transaction").withType("submit")
-                        )
-            )
-        ).render()
-    );
-}
+    @Override
+    public void getAll(Context ctx) {
+        ctx.render("jte/transactionsPage.jte",
+            Map.of("transactions", transactions));
+    }
 
     @Override
     public void getOne(Context ctx, String resourceId) {
