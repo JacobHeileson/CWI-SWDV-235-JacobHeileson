@@ -1,10 +1,11 @@
-
 package edu.cwi;
 
 import io.javalin.http.staticfiles.Location;
 import io.javalin.Javalin;
 import io.javalin.rendering.template.JavalinJte;
 import static io.javalin.apibuilder.ApiBuilder.*;
+
+import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
@@ -15,17 +16,34 @@ public class Main {
 
             config.fileRenderer(new JavalinJte());
 
-            config.staticFiles.add("/public", Location.CLASSPATH);
-
-            config.routes.post("/account", ctx -> {
-                ctx.redirect("/account.html");
-            });
-
-            config.routes.get("/logout", ctx -> {
-                ctx.redirect("/");
+            config.staticFiles.add(staticFiles -> {
+                staticFiles.hostedPath = "/public";
+                staticFiles.location = Location.CLASSPATH;
             });
 
             config.routes.apiBuilder(() -> {
+
+                before(ctx -> {
+                    var permittedRoles = ctx.routeRoles();
+                
+                    if (permittedRoles.isEmpty()) {
+                        return;
+                    }
+
+                    AppRole userRole = ctx.cookieStore().get("user-role");
+
+                    if (userRole == null || !permittedRoles.contains(userRole)) {
+                        ctx.redirect("/unauthorized.html");
+                    }
+                });
+
+                post("/login", AuthController::authenticate);
+                get("/logout", AuthController::logout);
+
+                path("/account", List.of(AppRole.CUSTOMER, AppRole.ADMIN), () -> {
+                    get(AccountController::renderAccount);
+                });
+
                 path("/transactions", () -> {
                     crud("{id}", transactionsController);
 

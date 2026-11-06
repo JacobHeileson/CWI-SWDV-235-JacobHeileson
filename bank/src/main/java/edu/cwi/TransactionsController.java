@@ -12,7 +12,7 @@ private int nextId = 1;
 
     @Override
     public void getAll(Context ctx) {
-        UserAccount account = new UserAccount("Checking Account", 0.0, transactions);
+        UserAccount account = new UserAccount(null, "Checking Account", null, 0.0, transactions);
         ctx.render("jte/accountPage.jte",
             Map.of("title", "Account Details", "account", account));
     }
