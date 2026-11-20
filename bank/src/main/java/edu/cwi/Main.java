@@ -11,6 +11,7 @@ public class Main {
     public static void main(String[] args) {
 
         TransactionsController transactionsController = new TransactionsController();
+        UsersController usersController = new UsersController();
 
         var app = Javalin.create(config -> {
 
@@ -33,9 +34,12 @@ public class Main {
                     AppRole userRole = ctx.cookieStore().get("user-role");
 
                     if (userRole == null || !permittedRoles.contains(userRole)) {
-                        ctx.redirect("/unauthorized.html");
+                        ctx.redirect("/public/unauthorized.html");
                     }
                 });
+
+                // Redirect root URL (http://localhost:7070/) to your starting page
+                get("/", ctx -> ctx.redirect("/public/index.html"));
 
                 post("/login", AuthController::authenticate);
                 get("/logout", AuthController::logout);
@@ -54,6 +58,10 @@ public class Main {
                     post("/delete", ctx ->
                         transactionsController.delete(ctx, ctx.formParam("id"))
                     );
+                });
+
+                path("/users", () -> {
+                    crud("{id}", usersController);
                 });
             });
         });

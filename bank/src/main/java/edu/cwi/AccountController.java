@@ -1,26 +1,35 @@
 package edu.cwi;
 
+import java.text.NumberFormat;
+import java.util.List;
+import java.util.Locale;
+import org.apache.ibatis.session.SqlSession;
 import io.javalin.http.Context;
-import java.util.Optional;
 
 public class AccountController {
 
     public static void renderAccount(Context ctx) {
-        // 1. Grab the user ID out of the session cookie store
-        String loggedInId = ctx.cookieStore().get("user-id");
+        Integer loggedInId = ctx.cookieStore().get("user-id");
 
         if (loggedInId == null) {
-            ctx.redirect("/unauthorized.html");
+            ctx.redirect("/public/unauthorized.html");
             return;
         }
 
-        // 2. Fetch the corresponding account record from our mocked memory database
-        Optional<UserAccount> accountOpt = AuthController.getUser(loggedInId);
+        try (SqlSession session = MyBatisConfig.getSqlSessionFactory().openSession()) {
+            AccountMapper accountMapper = session.getMapper(AccountMapper.class);
+            TransactionMapper transactionMapper = session.getMapper(TransactionMapper.class);
 
-        if (accountOpt.isPresent()) {
-            UserAccount account = accountOpt.get();
-            
-            // 3. Render your account template (or send a raw HTML snippet for easy validation)
+            Account account = accountMapper.findByUserId(loggedInId);
+
+            if (account == null) {
+                ctx.redirect("/public/unauthorized.html");
+                return;
+            }
+
+            List<Transaction> transactions = transactionMapper.findByAccountId(account.getId());
+            String formattedBalance = NumberFormat.getCurrencyInstance(Locale.US).format(account.getBalance());
+
             ctx.html("""
                 <!DOCTYPE html>
                 <html>
@@ -28,8 +37,8 @@ public class AccountController {
                     <title>Bank Account Dashboard</title>
                 </head>
                 <body>
-                    <h1>Welcome back, %s!</h1>
-                    <h2>Current Balance: %s</h2>
+                    <h1>Welcome back!</h1>
+                    <h2>%s Account Balance: %s</h2>
                     <h3>Recent Transactions:</h3>
                     <ul>
                         %s
@@ -39,25 +48,28 @@ public class AccountController {
                 </body>
                 </html>
             """.formatted(
-                account.name(), 
-                account.formatBalance(), // Calls your custom DecimalFormat helper
-                buildTransactionListHtml(account.transactions())
+                account.getAccountType(),
+                formattedBalance,
+                buildTransactionListHtml(transactions)
             ));
-        } else {
-            ctx.redirect("/unauthorized.html");
         }
     }
 
-    private static String buildTransactionListHtml(java.util.Map<String, String> transactions) {
+    private static String buildTransactionListHtml(List<Transaction> transactions) {
         if (transactions == null || transactions.isEmpty()) {
             return "<li>No recent ledger entries found.</li>";
         }
+        NumberFormat currency = NumberFormat.getCurrencyInstance(Locale.US);
         StringBuilder sb = new StringBuilder();
-        for (java.util.Map.Entry<String, String> entry : transactions.entrySet()) {
+        for (Transaction tx : transactions) {
             sb.append("<li><strong>ID #")
-              .append(entry.getKey())
-              .append(":</strong> ")
-              .append(entry.getValue())
+              .append(tx.getId())
+              .append(" (")
+              .append(tx.getTransactionType())
+              .append("):</strong> ")
+              .append(tx.getDescription())
+              .append(" — ")
+              .append(currency.format(tx.getAmount()))
               .append("</li>");
         }
         return sb.toString();
